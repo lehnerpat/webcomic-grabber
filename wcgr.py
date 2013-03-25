@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ########
 
-import argparse
+import sys, argparse
 import urllib, urlparse
 from bs4 import BeautifulSoup
 
@@ -64,7 +64,25 @@ def getStrFromElement(soup, specifier):
                     else: # an attribute was really specified
                         result = element[attr_name]
     return result
+
+def grabPage(url, title_element, image_element, next_element):
+    global args
+    try:
+        soup = BeautifulSoup(urllib.urlopen(url))
+    except IOError as e:
+        e.strerror = "Error while trying to open URL \"{}\":\n\t{}".format(args.url, e.strerror)
+        raise e
+
+    title = getStrFromElement(soup, args.title_element)
+    imgurl = getStrFromElement(soup, args.image_element)
+    nextel = getStrFromElement(soup, args.next_element)
+
+    print "Title: ", title
+    print "Image URL: ", imgurl
+    print "Next URL: ", nextel
     
+
+## Prepare and parse the command line arguments 
 helpepilog = """
 To select/extract a string from somewhere in the HTML document, you can use a
 STR_SPEC of the following format:
@@ -110,11 +128,36 @@ aparser.add_argument("-c", "--count",
 aparser.add_argument("url", help="the URL of the first comic page to grab")
 args = aparser.parse_args()
 
-print "URL: ", args.url
-soup = BeautifulSoup(urllib.urlopen(args.url))
-title = getStrFromElement(soup, args.title_element)
-imgurl = getStrFromElement(soup, args.image_element)
 
-## process -t/--title-element flag
-print "Title: ", title
-print "Image URL: ", imgurl
+## additional sanity checking on arguments
+if args.title_element == None or len(args.title_element) == 0 \
+        or args.image_element == None or len(args.image_element) == 0:
+    if not args.quiet:
+        print "Error: No 'title' element or no 'image' element was specified.\n"\
+            "Cannot grab comic. Aborting."
+    sys.exit(1)
+
+if args.next_element == None or len(args.next_element) == 0:
+    if not args.quiet:
+        print "Warning: No 'next' element was specified, can only grab the "\
+            "given URL,\nno following pages\n"
+    args.count = 1
+
+
+## print some info about what we're gonna do
+if args.verbose > 1:
+    print "Parsed arguments:\n", args
+if not args.quiet:
+    if args.count > 0:
+        print "Grabbing at most {} pages, starting at:".format(args.count)
+    else:
+        print "Grabbing all available pages, starting at:"
+    print "\t", args.url
+grabbedcount = 0 # counter for how many pages we've successfully grabbed
+url = args.url
+
+try:
+    grabPage(url, args.title_element, args.image_element, args.next_element)
+except IOError as e:
+    print e.strerror
+    sys.exit(1)

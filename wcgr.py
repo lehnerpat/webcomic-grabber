@@ -49,7 +49,7 @@ from bs4 import BeautifulSoup
 def getStrFromElement(soup, specifier):
     result=''
     if specifier != None: # if we actually got a specifier
-        parts = specifier.split('/', 1) # split it along slashes (only the first two parts will be used)
+        parts = specifier.rsplit('/', 1) # split it along slashes (only the first two parts will be used)
         if len(parts) > 0: # if splitting went right (this should always hold, but yaknow, be safe)
             css_path = parts[0] # the first part is the actual CSS selector/path
             if css_path != None and len(css_path) > 0: # if the css path is not empty
@@ -65,15 +65,56 @@ def getStrFromElement(soup, specifier):
                         result = element[attr_name]
     return result
     
-
-aparser = argparse.ArgumentParser()
-aparser.add_argument("-t", "--title-element", help="the identifier of the comic's issue title")
+helpepilog = """
+To select/extract a string from somewhere in the HTML document, you can use a
+STR_SPEC of the following format:
+\t<CSS Selector>[/<attribute name>]
+That is, a CSS selector to specify the HTML tag, optionally followed by a slash
+and an attribute name. If more than one tag match the CSS selector, the first
+one will be selected. If an attribute name is given, the value of that 
+attribute will be used as result; if no attribute name is given (the slash can
+be left out in that case, too), the selected tag's text content will be used
+instead.
+"""
+aparser = argparse.ArgumentParser(
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog=helpepilog
+)
+group = aparser.add_mutually_exclusive_group()
+group.add_argument("-q", "--quiet",
+    action="store_true",
+    help="make the script perform silently, suppressing normal output; note\
+        that Python errors will still be printed")
+group.add_argument("-v", "--verbose",
+    action="count",
+    help="make the script more verbose, explaining what it does as it goes\
+        along")
+del group
+aparser.add_argument("-t", "--title-element",
+    metavar="STR_SPEC",
+    help="the specifier of the comic's issue title")
+aparser.add_argument("-i", "--image-element",
+    metavar="STR_SPEC",
+    help="the specifier of the comic's image URL")
+aparser.add_argument("-n", "--next-element",
+    metavar="STR_SPEC",
+    help="the specifier of the link to the next issue page")
+aparser.add_argument("-o", "--output",
+    metavar="DIR",
+    help="output directory for downloaded files; must be writable; defaults\
+        to current directory")
+aparser.add_argument("-c", "--count",
+    type=int,
+    metavar="N",
+    help="maximum number of pages to grab")
 aparser.add_argument("url", help="the URL of the first comic page to grab")
 args = aparser.parse_args()
 
 print "URL: ", args.url
 soup = BeautifulSoup(urllib.urlopen(args.url))
+title = getStrFromElement(soup, args.title_element)
+imgurl = getStrFromElement(soup, args.image_element)
 
 ## process -t/--title-element flag
-print "Title: ", getStrFromElement(soup, args.title_element)
-
+print "Title: ", title
+print "Image URL: ", imgurl

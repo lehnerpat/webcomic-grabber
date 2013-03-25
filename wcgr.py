@@ -46,6 +46,26 @@ from bs4 import BeautifulSoup
 #for i in range(10):
 #    url = getImageFrom(url)
 
+def getStrFromElement(soup, specifier):
+    result=''
+    if specifier != None: # if we actually got a specifier
+        parts = specifier.split('/', 1) # split it along slashes (only the first two parts will be used)
+        if len(parts) > 0: # if splitting went right (this should always hold, but yaknow, be safe)
+            css_path = parts[0] # the first part is the actual CSS selector/path
+            if css_path != None and len(css_path) > 0: # if the css path is not empty
+                attr_name = ''
+                if len(parts) > 1: # if we actually have a second part
+                    attr_name = parts[1] # then that second part is the attribute name
+                element = soup.select(css_path) # get the specified element(s)
+                if len(element) > 0: # if we got some
+                    element = element[0] # pick only the first one
+                    if attr_name == None or len(attr_name) == 0: # empty attribute = use tag content
+                        result = element.string
+                    else: # an attribute was really specified
+                        result = element[attr_name]
+    return result
+    
+
 aparser = argparse.ArgumentParser()
 aparser.add_argument("-t", "--title-element", help="the identifier of the comic's issue title")
 aparser.add_argument("url", help="the URL of the first comic page to grab")
@@ -55,22 +75,5 @@ print "URL: ", args.url
 soup = BeautifulSoup(urllib.urlopen(args.url))
 
 ## process -t/--title-element flag
-title=''
-if args.title_element != None: # if we actually got the flag
-#print soup.select("#ctitle")[0].string
-    parts = args.title_element.split('/') # split it along slashes (only the first two parts will be used
-    if len(parts) > 0: # if splitting went right (this should always hold, but yaknow, be safe)
-        title_css_path = parts[0] # the first part is the actual CSS selector/path
-        if title_css_path != None and len(title_css_path) > 0: #if the css path is not empty
-            title_attribute = ''
-            if len(parts) > 1: # if we actually have a second part
-                title_attribute = parts[1] # then that second part is the attribute
-            title_element = soup.select(title_css_path) # get the specified element(s)
-            if len(title_element) > 0: # if we got some
-                title_element = title_element[0] # pick only the first one
-                if title_attribute == None or len(title_attribute) == 0: # empty attribute = use tag content
-                    title = title_element.string
-                else: # an attribute was really specified
-                    title = title_element[title_attribute]
-print "Title: ", title
+print "Title: ", getStrFromElement(soup, args.title_element)
 

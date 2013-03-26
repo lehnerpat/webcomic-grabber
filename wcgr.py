@@ -144,12 +144,15 @@ args = aparser.parse_args()
 
 
 ## additional sanity checking on arguments
-if args.title_element == None or len(args.title_element) == 0 \
-        or args.image_element == None or len(args.image_element) == 0:
+if args.image_element == None or len(args.image_element) == 0:
     if not args.quiet:
         print "Error: No 'title' element or no 'image' element was specified.\n"\
             "Cannot grab comic. Aborting."
     sys.exit(1)
+
+if args.title_element == None or len(args.title_element) == 0:
+    if args.verbose:
+        print "Notice: No 'title' element was specified"
 
 if args.next_element == None or len(args.next_element) == 0:
     if not args.quiet:

@@ -39,6 +39,15 @@ def getStrFromElement(soup, specifier):
                         result = element[attr_name]
     return result
 
+def makeOutputFileName(url, outdir):
+    global args
+    result = outdir
+    if args.number_width > 0:
+        result += ('%0{}d_').format(args.number_width) % args.start_number
+        args.start_number += 1
+    result += os.path.basename(urlparse.urlparse(url).path)
+    return result
+
 def grabPage(url, title_element, image_element, next_element):
     global args, outdir
     try:
@@ -49,17 +58,21 @@ def grabPage(url, title_element, image_element, next_element):
 
     title = getStrFromElement(soup, args.title_element)
     imgurl = getStrFromElement(soup, args.image_element)
+    imgfile = makeOutputFileName(imgurl, outdir)
     nexturl = getStrFromElement(soup, args.next_element)
-
-    if not args.dry_run:
-        urllib.urlretrieve(imgurl, outdir + os.path.basename(urlparse.urlparse(imgurl).path))
 
     if not args.quiet:
         print "Image URL: ", imgurl
-        if args.verbose > 1:
+        if args.verbose > 0:
+            print 'Image file: ', imgfile
             print "Title: ", title
             print "Next URL: ", nexturl
-            print "-----------------------------------------------------------------"
+
+    if not args.dry_run:
+        urllib.urlretrieve(imgurl, imgfile)
+
+    if args.verbose > 0:
+        print "-----------------------------------------------------------------"
     
     return urlparse.urljoin(url, nexturl)
     
@@ -110,6 +123,17 @@ aparser.add_argument("-c", "--count",
 aparser.add_argument('-d', '--dry-run',
     action='store_true',
     help='only grab and display the URLs, do not actually download the files')
+aparser.add_argument('-s', '--start-number',
+    type=int,
+    metavar='N',
+    default=1,
+    help='where to start when numbering the output files, default is 1')
+aparser.add_argument('-w', '--number-width',
+    type=int,
+    metavar='N',
+    default=4,
+    help='how many digits to use for the running number in the output file '\
+        'name, default is 4; use 0 to disable numbering of output files')
 aparser.add_argument("url", help="the URL of the first comic page to grab")
 args = aparser.parse_args()
 

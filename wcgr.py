@@ -17,7 +17,7 @@
 ########
 
 import os, sys, argparse
-import urllib, urlparse
+import urllib, urllib2, urlparse
 from lxml import etree, html
 from lxml.cssselect import CSSSelector
 
@@ -53,7 +53,12 @@ def makeOutputFileName(url, outdir):
 def grabPage(url, title_element, image_element, next_element):
     global args, outdir
     try:
-        tree = etree.parse(urllib.urlopen(url), etree.HTMLParser())
+        if args.verbose > 2:
+            print "Fetching HTML from ", url
+        tree = etree.parse(urllib2.urlopen(url), etree.HTMLParser())
+        if args.verbose > 2:
+            print "\tResult: ", tree
+            print "\tRoot: ", tree.getroot()
     except IOError as e:
         e.strerror = "Error while trying to open URL \"{}\":\n\t{}".format(url, e.strerror)
         raise e
@@ -71,7 +76,11 @@ def grabPage(url, title_element, image_element, next_element):
         if args.verbose > 0:
             print 'Image file: ', imgfile
             print "Title: ", title
-            print "Next URL: ", nexturl
+            if args.verbose > 1:
+                print "Raw next URL: ", nexturl
+    nexturl = urlparse.urljoin(url, nexturl)
+    if args.verbose > 0:
+        print "Next URL: ", nexturl
 
     if not args.dry_run:
         urllib.urlretrieve(imgurl, imgfile)
@@ -79,7 +88,7 @@ def grabPage(url, title_element, image_element, next_element):
     if args.verbose > 0:
         print "-----------------------------------------------------------------"
     
-    return urlparse.urljoin(url, nexturl)
+    return nexturl
     
 
 ## Prepare and parse the command line arguments 

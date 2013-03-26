@@ -18,9 +18,10 @@
 
 import os, sys, argparse
 import urllib, urlparse
-from bs4 import BeautifulSoup
+from lxml import etree, html
+from lxml.cssselect import CSSSelector
 
-def getStrFromElement(soup, specifier):
+def getStrFromElement(tree, specifier):
     result=''
     if specifier != None: # if we actually got a specifier
         parts = specifier.rsplit('/', 1) # split it along slashes (only the first two parts will be used)
@@ -30,13 +31,14 @@ def getStrFromElement(soup, specifier):
                 attr_name = ''
                 if len(parts) > 1: # if we actually have a second part
                     attr_name = parts[1] # then that second part is the attribute name
-                element = soup.select(css_path) # get the specified element(s)
+                sel = CSSSelector(css_path)
+                element = sel(tree.getroot()) # get the specified element(s)
                 if len(element) > 0: # if we got some
                     element = element[0] # pick only the first one
                     if attr_name == None or len(attr_name) == 0: # empty attribute = use tag content
-                        result = element.string
+                        result = element.text
                     else: # an attribute was really specified
-                        result = element[attr_name]
+                        result = element.get(attr_name)
     return result
 
 def makeOutputFileName(url, outdir):
@@ -51,18 +53,18 @@ def makeOutputFileName(url, outdir):
 def grabPage(url, title_element, image_element, next_element):
     global args, outdir
     try:
-        soup = BeautifulSoup(urllib.urlopen(url))
+        tree = etree.parse(urllib.urlopen(url), etree.HTMLParser())
     except IOError as e:
         e.strerror = "Error while trying to open URL \"{}\":\n\t{}".format(url, e.strerror)
         raise e
 
-    title = getStrFromElement(soup, args.title_element)
-    imgurl = getStrFromElement(soup, args.image_element)
+    title = getStrFromElement(tree, args.title_element)
+    imgurl = getStrFromElement(tree, args.image_element)
     if args.verbose > 1:
         print "Raw image url: ", imgurl
     imgurl = urlparse.urljoin(url, imgurl)
     imgfile = makeOutputFileName(imgurl, outdir)
-    nexturl = getStrFromElement(soup, args.next_element)
+    nexturl = getStrFromElement(tree, args.next_element)
 
     if not args.quiet:
         print "Image URL: ", imgurl
@@ -177,7 +179,8 @@ if not args.quiet:
         outdir += os.sep # append it
     if args.verbose > 0:
         print 'Saving output files to ', outdir
-    
+    if args.dry_run:
+        print 'Dry run selected, image files will not be downloaded'    
 grabbedcount = 0 # counter for how many pages we've successfully grabbed
 url = args.url
 

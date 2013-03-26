@@ -58,6 +58,9 @@ def grabPage(url, title_element, image_element, next_element):
 
     title = getStrFromElement(soup, args.title_element)
     imgurl = getStrFromElement(soup, args.image_element)
+    if args.verbose > 1:
+        print "Raw image url: ", imgurl
+    imgurl = urlparse.urljoin(url, imgurl)
     imgfile = makeOutputFileName(imgurl, outdir)
     nexturl = getStrFromElement(soup, args.next_element)
 

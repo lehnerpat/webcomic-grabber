@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ########
 
-import sys, argparse
+import os, sys, argparse
 import urllib, urlparse
 from bs4 import BeautifulSoup
 
@@ -40,7 +40,7 @@ def getStrFromElement(soup, specifier):
     return result
 
 def grabPage(url, title_element, image_element, next_element):
-    global args
+    global args, outdir
     try:
         soup = BeautifulSoup(urllib.urlopen(url))
     except IOError as e:
@@ -51,9 +51,15 @@ def grabPage(url, title_element, image_element, next_element):
     imgurl = getStrFromElement(soup, args.image_element)
     nexturl = getStrFromElement(soup, args.next_element)
 
-    print "Title: ", title
-    print "Image URL: ", imgurl
-    print "Next URL: ", nexturl
+    if not args.dry_run:
+        urllib.urlretrieve(imgurl, outdir + os.path.basename(urlparse.urlparse(imgurl).path))
+
+    if not args.quiet:
+        print "Image URL: ", imgurl
+        if args.verbose > 1:
+            print "Title: ", title
+            print "Next URL: ", nexturl
+            print "-----------------------------------------------------------------"
     
     return urlparse.urljoin(url, nexturl)
     
@@ -101,6 +107,9 @@ aparser.add_argument("-c", "--count",
     type=int,
     metavar="N",
     help="maximum number of pages to grab")
+aparser.add_argument('-d', '--dry-run',
+    action='store_true',
+    help='only grab and display the URLs, do not actually download the files')
 aparser.add_argument("url", help="the URL of the first comic page to grab")
 args = aparser.parse_args()
 
@@ -123,13 +132,25 @@ if args.next_element == None or len(args.next_element) == 0:
 ## print some info about what we're gonna do
 if not args.quiet:
     print ''
+    # if verbose, dump the parsed arguments:
     if args.verbose > 1:
         print "Parsed arguments:\n", args
+    # print how many pages we'll grab at most
     if args.count > 0:
         print "Grabbing at most {} pages, starting at:".format(args.count)
     else:
         print "Grabbing all available pages, starting at:"
     print "\t", args.url
+    # get the output dir
+    if args.output == None:
+        outdir = './'
+    else:
+        outdir = args.output
+    if not outdir.endswith(os.sep): # if the path does not end with a separator (denoting a folder)
+        outdir += os.sep # append it
+    if args.verbose > 0:
+        print 'Saving output files to ', outdir
+    
 grabbedcount = 0 # counter for how many pages we've successfully grabbed
 url = args.url
 

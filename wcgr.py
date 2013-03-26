@@ -44,16 +44,18 @@ def grabPage(url, title_element, image_element, next_element):
     try:
         soup = BeautifulSoup(urllib.urlopen(url))
     except IOError as e:
-        e.strerror = "Error while trying to open URL \"{}\":\n\t{}".format(args.url, e.strerror)
+        e.strerror = "Error while trying to open URL \"{}\":\n\t{}".format(url, e.strerror)
         raise e
 
     title = getStrFromElement(soup, args.title_element)
     imgurl = getStrFromElement(soup, args.image_element)
-    nextel = getStrFromElement(soup, args.next_element)
+    nexturl = getStrFromElement(soup, args.next_element)
 
     print "Title: ", title
     print "Image URL: ", imgurl
-    print "Next URL: ", nextel
+    print "Next URL: ", nexturl
+    
+    return urlparse.urljoin(url, nexturl)
     
 
 ## Prepare and parse the command line arguments 
@@ -119,9 +121,10 @@ if args.next_element == None or len(args.next_element) == 0:
 
 
 ## print some info about what we're gonna do
-if args.verbose > 1:
-    print "Parsed arguments:\n", args
 if not args.quiet:
+    print ''
+    if args.verbose > 1:
+        print "Parsed arguments:\n", args
     if args.count > 0:
         print "Grabbing at most {} pages, starting at:".format(args.count)
     else:
@@ -130,8 +133,15 @@ if not args.quiet:
 grabbedcount = 0 # counter for how many pages we've successfully grabbed
 url = args.url
 
+print ''
 try:
-    grabPage(url, args.title_element, args.image_element, args.next_element)
+    while url != None and len(url) > 0 and (args.count <= 0 or grabbedcount < args.count):
+        newurl = grabPage(url, args.title_element, args.image_element, args.next_element)
+        if newurl == url: # end-of-comic detection; TODO: make a list of visited pages?
+            url = None
+        else:
+            url = newurl
+        grabbedcount += 1
 except IOError as e:
     print e.strerror
     sys.exit(1)

@@ -2,6 +2,16 @@
 
 Automatically downloads the images from continuous issues of a webcomic, allowing you to easily customize which part of the page's HTML is used as the issue title, the image URL and the link to the next issue.
 
+# Prerequisites
+
+* **Required:**
+  * Python 2 *(should work with Python 2.6 and above, only tested on 2.7)*
+  * lxml
+* **Optional:**
+  * *requests:* some web servers send responses on which Python's standard
+    HTTP library barfs; the requests library is more robust at handling
+    HTTP responses
+
 # License
 
 This program is released under the GNU GPLv3 or newer.

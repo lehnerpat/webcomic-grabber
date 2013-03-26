@@ -20,32 +20,6 @@ import sys, argparse
 import urllib, urlparse
 from bs4 import BeautifulSoup
 
-#url = "https://xkcd.com/1/"
-
-##First testing code: (xkcd)
-#soup = BeautifulSoup(urllib.urlopen(url))
-
-#print "URL: ", url
-#print "Title: ", soup.title.string
-
-#img = soup.find(id="comic").img
-#print "Image URL: ", img['src']
-#print "Image subtext: ", img['title']
-
-#print "Next: ", urlparse.urljoin(url, soup.find(id="middleContainer").ul.find(rel="next")['href'])
-#print "Prev: ", urlparse.urljoin(url, soup.find(id="middleContainer").ul.find(rel="prev")['href'])
-
-##Second testing code: (xkcd)
-#def getImageFrom(url):
-#    soup = BeautifulSoup(urllib.urlopen(url))
-#    
-#    print url, " | ", soup.title.string, " | ", soup.find(id="comic").img['src']
-#    
-#    return urlparse.urljoin(url, soup.find(id="middleContainer").ul.find(rel="next")['href'])
-#
-#for i in range(10):
-#    url = getImageFrom(url)
-
 def getStrFromElement(soup, specifier):
     result=''
     if specifier != None: # if we actually got a specifier

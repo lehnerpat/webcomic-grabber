@@ -17,9 +17,15 @@
 ########
 
 import os, sys, argparse
-import urllib, urllib2, urlparse
+import urllib2, urlparse
 from lxml import etree, html
 from lxml.cssselect import CSSSelector
+
+try:
+    import requests
+    libRequestsAvail = True
+except ImportError:
+    libRequestsAvail = False
 
 def getStrFromElement(tree, specifier):
     result=''
@@ -32,7 +38,7 @@ def getStrFromElement(tree, specifier):
                 if len(parts) > 1: # if we actually have a second part
                     attr_name = parts[1] # then that second part is the attribute name
                 sel = CSSSelector(css_path)
-                element = sel(tree.getroot()) # get the specified element(s)
+                element = sel(tree) # get the specified element(s)
                 if len(element) > 0: # if we got some
                     element = element[0] # pick only the first one
                     if attr_name == None or len(attr_name) == 0: # empty attribute = use tag content
@@ -55,10 +61,14 @@ def grabPage(url, title_element, image_element, next_element):
     try:
         if args.verbose > 2:
             print "Fetching HTML from ", url
-        tree = etree.parse(urllib2.urlopen(url), etree.HTMLParser())
+        if libRequestsAvail:
+            r = requests.get(url)
+            src = r.content
+        else:
+            src = urllib2.urlopen(url).read()
+        tree = etree.fromstring(src, parser=html.HTMLParser())
         if args.verbose > 2:
             print "\tResult: ", tree
-            print "\tRoot: ", tree.getroot()
     except IOError as e:
         e.strerror = "Error while trying to open URL \"{}\":\n\t{}".format(url, e.strerror)
         raise e
@@ -82,8 +92,15 @@ def grabPage(url, title_element, image_element, next_element):
     if args.verbose > 0:
         print "Next URL: ", nexturl
 
-    if not args.dry_run:
-        urllib.urlretrieve(imgurl, imgfile)
+    if not args.dry_run: # if we're not in dry run mode, actually get the image
+        if libRequestsAvail: # if requests is available
+            r = requests.get(imgurl)
+            with open(imgfile, "wb") as outfile:
+                outfile.write(r.content)
+        else: # otherwise, fall back to urllib2
+            f = urllib2.urlopen(imgurl)
+            with open(imgfile, "wb") as outfile:
+                outfile.write(f.read())
 
     if args.verbose > 0:
         print "-----------------------------------------------------------------"
@@ -175,7 +192,9 @@ if not args.quiet:
     print ''
     # if verbose, dump the parsed arguments:
     if args.verbose > 1:
-        print "Parsed arguments:\n", args
+        print "Parsed arguments:\n", args, "\n"
+        if not libRequestsAvail:
+            print "requests library is not available. Falling back to urllib2+httplib"
     # print how many pages we'll grab at most
     if args.count > 0:
         print "Grabbing at most {} pages, starting at:".format(args.count)

@@ -418,6 +418,11 @@ else:
     outdir = args.output
 if not outdir.endswith(os.sep): # if the path does not end with a separator (denoting a folder)
     outdir += os.sep # append it
+if not os.path.isdir(outdir):
+    if not args.quiet:
+        print '\nError: Output folder "{}" does not exist or is not a folder\n'.format(os.path.abspath(outdir))
+    if not args.dry_run:
+        sys.exit(1)
 if args.verbose > 0:
     print 'Saving output files to ', outdir
 if not args.quiet and args.dry_run:

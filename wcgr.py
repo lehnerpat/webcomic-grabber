@@ -255,11 +255,9 @@ aparser.add_argument('--aliases-file',
 aparser.add_argument("url", help="the URL of the first comic page to grab")
 args = aparser.parse_args()
 
-print ''
-
 # if verbose, dump the parsed arguments:
 if args.verbose > 1:
-    print "Parsed arguments:\n", args, '\n'
+    print "\nParsed arguments:\n", args, '\n'
 
 ## if requested, let's try to load the template
 templstr = None
@@ -298,21 +296,34 @@ if args.template != None: # let's use the template that's specified or found
             print '\t', e
 
 if templstr != None and len(templstr) > 0:
+    addnewline = True
     templargs = aparser.parse_args(shlex.split(templstr + ' ' + args.url))
     if args.verbose > 1:
+        if addnewline:
+            print ''
+            addnewline = False
         print 'Parsed template arguments:\n', templargs
     if args.image_element == None or len(args.image_element) <= 0:
         args.image_element = templargs.image_element
     elif args.verbose > 0:
+        if addnewline:
+            print ''
+            addnewline = False
         print 'Overriding image element from template with command-line argument {}'.format(args.image_element)
     if args.title_element == None or len(args.title_element) <= 0:
         args.title_element = templargs.title_element
     elif args.verbose > 0:
+        if addnewline:
+            print ''
+            addnewline = False
         print 'Overriding title element from template with command-line argument {}'.format(args.title_element)
     if args.next_element == None or len(args.next_element()) <= 0:
         args.next_element = templargs.next_element
     elif args.verbose > 0:
+        if addnewline:
+            print ''
         print 'Overriding next-URL element from template with command-line argment {}'.format(args.next_element)
+    del addnewline
 
 ## additional sanity checking on arguments
 if args.image_element == None or len(args.image_element) == 0:
@@ -337,26 +348,28 @@ if not args.quiet:
     if args.verbose > 1 and not libRequestsAvail:
         print "requests library is not available. Falling back to urllib2+httplib"
     # print how many pages we'll grab at most
+    print ''
     if args.count > 0:
         print "Grabbing at most {} pages, starting at:".format(args.count)
     else:
         print "Grabbing all available pages, starting at:"
     print "\t", args.url
-    # get the output dir
-    if args.output == None:
-        outdir = './'
-    else:
-        outdir = args.output
-    if not outdir.endswith(os.sep): # if the path does not end with a separator (denoting a folder)
-        outdir += os.sep # append it
-    if args.verbose > 0:
-        print 'Saving output files to ', outdir
-    if args.dry_run:
-        print 'Dry run selected, image files will not be downloaded'    
+# get the output dir
+if args.output == None:
+    outdir = './'
+else:
+    outdir = args.output
+if not outdir.endswith(os.sep): # if the path does not end with a separator (denoting a folder)
+    outdir += os.sep # append it
+if args.verbose > 0:
+    print 'Saving output files to ', outdir
+if not args.quiet and args.dry_run:
+    print 'Dry run selected, image files will not be downloaded'    
 grabbedcount = 0 # counter for how many pages we've successfully grabbed
 url = args.url
 
-print ''
+if not args.quiet:
+    print ''
 try:
     while url != None and len(url) > 0 and (args.count <= 0 or grabbedcount < args.count):
         newurl = grabPage(url, args.title_element, args.image_element, args.next_element)

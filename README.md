@@ -6,7 +6,7 @@ Automatically downloads the images from continuous issues of a webcomic, allowin
 
 * **Required:**
   * Python 2 *(should work with Python 2.6 and above, only tested on 2.7)*
-  * lxml
+  * lxml *(including* cssselect; *which might be placed in an extra package)*
 * **Optional:**
   * *requests:* some web servers send responses on which Python's standard
     HTTP library barfs; the requests library is more robust at handling

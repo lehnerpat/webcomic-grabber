@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ########
 
-import os, sys, argparse
+import os, sys, argparse, shlex
 import urllib2, urlparse
 from lxml import etree, html
 from lxml.cssselect import CSSSelector
@@ -262,6 +262,7 @@ if args.verbose > 1:
     print "Parsed arguments:\n", args, '\n'
 
 ## if requested, let's try to load the template
+templstr = None
 if args.auto: # we use the comic URL to look up the template
     args.aliasurl = args.url
 if args.aliasurl != None: # we use that alias URL to look up the template
@@ -295,7 +296,23 @@ if args.template != None: # let's use the template that's specified or found
             print 'An error occurred while reading templates from {}'.format(args.aliases_file)
         if args.verbose > 0:
             print '\t', e
-        
+
+if templstr != None and len(templstr) > 0:
+    templargs = aparser.parse_args(shlex.split(templstr + ' ' + args.url))
+    if args.verbose > 1:
+        print 'Parsed template arguments:\n', templargs
+    if args.image_element == None or len(args.image_element) <= 0:
+        args.image_element = templargs.image_element
+    elif args.verbose > 0:
+        print 'Overriding image element from template with command-line argument {}'.format(args.image_element)
+    if args.title_element == None or len(args.title_element) <= 0:
+        args.title_element = templargs.title_element
+    elif args.verbose > 0:
+        print 'Overriding title element from template with command-line argument {}'.format(args.title_element)
+    if args.next_element == None or len(args.next_element()) <= 0:
+        args.next_element = templargs.next_element
+    elif args.verbose > 0:
+        print 'Overriding next-URL element from template with command-line argment {}'.format(args.next_element)
 
 ## additional sanity checking on arguments
 if args.image_element == None or len(args.image_element) == 0:

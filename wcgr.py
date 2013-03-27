@@ -42,7 +42,7 @@ def lookupTemplateFromAlias(alias_url, aliases_file):
         # skip empty lines and comment lines
         if line == None or len(line) == 0 or line[0] == '#':
             continue
-        parts = line.split('|')
+        parts = line.rsplit('|', 1)
         if parts == None or len(parts) < 2:
             if args.verbose > 0:
                 print '  {}, line {}: malformed line, ignoring'.format(aliases_file, c)
@@ -82,7 +82,7 @@ def getTemplate(template_id, templates_file):
         # skip empty lines and comment lines
         if line == None or len(line) == 0 or line[0] == '#':
             continue
-        parts = line.split('|')
+        parts = line.split('|', 1)
         if parts == None or len(parts) < 2:
             if args.verbose > 0:
                 print '  {}, line {}: malformed line, ignoring'.format(templates_file, c)

@@ -199,14 +199,22 @@ def grabPage(url, title_element, image_element, next_element):
         print "Next URL: ", nexturl
 
     if not args.dry_run: # if we're not in dry run mode, actually get the image
-        if libRequestsAvail: # if requests is available
-            r = requests.get(imgurl)
-            with open(imgfile, "wb") as outfile:
-                outfile.write(r.content)
-        else: # otherwise, fall back to urllib2
-            f = urllib2.urlopen(imgurl)
-            with open(imgfile, "wb") as outfile:
-                outfile.write(f.read())
+        try:
+            if libRequestsAvail: # if requests is available
+                data = requests.get(imgurl).content
+            else: # otherwise, fall back to urllib2
+                f = urllib2.urlopen(imgurl)
+                data = f.read()
+                f.close()
+            try:
+                with open(imgfile, "wb") as outfile:
+                    outfile.write(data)
+            except IOError as e:
+                if not args.quiet:
+                    print "Error while writing image to disk:\n\t", e.strerror
+        except IOError as e:
+            if not args.quiet:
+                print "Error while reading image:\n\t", e.strerror
 
     if args.verbose > 0:
         print "-----------------------------------------------------------------"
@@ -272,7 +280,7 @@ aparser.add_argument("--next-regex",
     help="a regular expression to be applied after extracting the 'next page' URL")
 aparser.add_argument("-o", "--output",
     metavar="DIR",
-    help="output directory for downloaded files; must be writable; defaults\
+    help="output directory for downloaded files; must be writable and exist; defaults\
         to current directory")
 aparser.add_argument("-c", "--count",
     type=int,

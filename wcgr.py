@@ -220,6 +220,34 @@ def grabPage(url, title_element, image_element, next_element):
         print "-----------------------------------------------------------------"
     
     return nexturl
+
+def getOutDir():
+    global args
+    if args.output == None:
+        outdir = './'
+    else:
+        outdir = args.output
+    if not outdir.endswith(os.sep): # if the path does not end with a separator (denoting a folder)
+        outdir += os.sep # append it
+    if not os.path.isdir(outdir):
+        if os.path.exists(outdir):
+            if not args.quiet:
+                print '\nError: Output location "{}" exists but is not a folder\n'.format(os.path.abspath(outdir))
+            if not args.dry_run:
+                sys.exit(1)
+        elif args.dry_run:
+            if args.verbose > 1:
+                print "Output location {} does not exist. Will be created in a non-dry-run.".format(os.path.abspath(outdir))
+        else:
+            try:
+                if args.verbose > 1:
+                    print "Output location {} does not exist, creating".format(os.path.abspath(outdir))
+                os.mkdir(outdir)
+            except OSError as e:
+                if not args.quiet:
+                    print "Creation of output folder {} failed:\n\t{}".format(os.path.abspath(outdir), e)
+                sys.exit(1)
+    return outdir
     
 
 ## Prepare and parse the command line arguments 
@@ -412,17 +440,7 @@ if not args.quiet:
         print "Grabbing all available pages, starting at:"
     print "\t", args.url
 # get the output dir
-if args.output == None:
-    outdir = './'
-else:
-    outdir = args.output
-if not outdir.endswith(os.sep): # if the path does not end with a separator (denoting a folder)
-    outdir += os.sep # append it
-if not os.path.isdir(outdir):
-    if not args.quiet:
-        print '\nError: Output folder "{}" does not exist or is not a folder\n'.format(os.path.abspath(outdir))
-    if not args.dry_run:
-        sys.exit(1)
+outdir = getOutDir()
 if args.verbose > 0:
     print 'Saving output files to ', outdir
 if not args.quiet and args.dry_run:

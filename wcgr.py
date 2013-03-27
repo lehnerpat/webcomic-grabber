@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ########
 
-import os, sys, argparse, shlex
+import os, sys, argparse, shlex, re
 import urllib2, urlparse
 from lxml import etree, html
 from lxml.cssselect import CSSSelector
@@ -54,16 +54,20 @@ def lookupTemplateFromAlias(alias_url, aliases_file):
                 if args.verbose > 0:
                     print '  {}, line {}: empty, ignoring'.format(aliases_file, c)
                 continue # drop the empty regex
-            # TODO: implement handling regexp
+            if re.search(regex, alias_url) != None:
+                templ_id = parts[1].strip()
+                break
         else: # otherwise, this is a simple prefix
             if alias_url.startswith(alias):
-                try:
-                    templ_id = int(parts[1].strip())
-                    break
-                except ValueError:
-                    if args.verbose > 0:
-                        print '  {}, line {}: malformed template ID (must be int), ignoring'.format(aliases_file, c)
+                templ_id = parts[1].strip()
+                break
     f.close()
+    if templ_id != None:
+        try:
+            templ_id = int(templ_id)
+        except ValueError:
+            if args.verbose > 0:
+                print '  {}, line {}: malformed template ID (must be int), ignoring'.format(aliases_file, c)
     return templ_id
 
 # @returns a string containing argparse arguments or `None` if the given ID was not found

@@ -264,36 +264,44 @@ templstr = None
 if args.auto: # we use the comic URL to look up the template
     args.aliasurl = args.url
 if args.aliasurl != None: # we use that alias URL to look up the template
-    try:
-        if args.verbose > 1:
-            print 'Looking up template for URL {} in {}'.format(args.aliasurl, args.aliases_file)
-        args.template = lookupTemplateFromAlias(args.aliasurl, args.aliases_file)
-        if not args.quiet and args.template == None:
-            print ('Error: No matching template was found for URL {} in aliases '\
-                'list {}').format(args.aliasurl, args.aliases_file)
-        if args.verbose > 1 and args.template != None:
-            print 'Template ID for {} is {}'.format(args.aliasurl, args.template)
-    except IOError as e:
+    if not os.path.isfile(args.aliases_file):
         if not args.quiet:
-            print 'An error occurred while reading aliases from {}'.format(args.aliases_file)
-        if args.verbose > 0:
-            print '\t', e
-        args.template = None
+            print "File {} does not exist, could not look up template".format(args.aliases_file)
+    else:
+        try:
+            if args.verbose > 1:
+                print 'Looking up template for URL {} in {}'.format(args.aliasurl, args.aliases_file)
+            args.template = lookupTemplateFromAlias(args.aliasurl, args.aliases_file)
+            if not args.quiet and args.template == None:
+                print ('Error: No matching template was found for URL {} in aliases '\
+                    'list {}').format(args.aliasurl, args.aliases_file)
+            if args.verbose > 1 and args.template != None:
+                print 'Template ID for {} is {}'.format(args.aliasurl, args.template)
+        except IOError as e:
+            if not args.quiet:
+                print 'An error occurred while reading aliases from {}'.format(args.aliases_file)
+            if args.verbose > 0:
+                print '\t', e
+            args.template = None
 if args.template != None: # let's use the template that's specified or found
-    try:
-        if args.verbose > 1:
-            print 'Looking for template {} in {}'.format(args.template, args.templates_file)
-        templstr = getTemplate(args.template, args.templates_file)
-        if not args.quiet and templstr == None:
-            print 'Error: Template {} was not found in templates file {}'.format(
-                args.template, args.templates_file)
-        if args.verbose > 1 and templstr != None:
-            print 'Template {} returned the argument string "{}"'.format(args.template, templstr)
-    except IOError as e:
+    if not os.path.isfile(args.templates_file):
         if not args.quiet:
-            print 'An error occurred while reading templates from {}'.format(args.aliases_file)
-        if args.verbose > 0:
-            print '\t', e
+            print "File {} does not exist, could not look up template ID".format(args.templates_file)
+    else:
+        try:
+            if args.verbose > 1:
+                print 'Looking for template {} in {}'.format(args.template, args.templates_file)
+            templstr = getTemplate(args.template, args.templates_file)
+            if not args.quiet and templstr == None:
+                print 'Error: Template {} was not found in templates file {}'.format(
+                    args.template, args.templates_file)
+            if args.verbose > 1 and templstr != None:
+                print 'Template {} returned the argument string "{}"'.format(args.template, templstr)
+        except IOError as e:
+            if not args.quiet:
+                print 'An error occurred while reading templates from {}'.format(args.aliases_file)
+            if args.verbose > 0:
+                print '\t', e
 
 if templstr != None and len(templstr) > 0:
     addnewline = True

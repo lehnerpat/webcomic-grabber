@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ########
 
-import os, sys, argparse, shlex
+import os, sys, argparse, shlex, re
 import urllib2, urlparse
 from lxml import etree, html
 from lxml.cssselect import CSSSelector
@@ -42,7 +42,7 @@ def lookupTemplateFromAlias(alias_url, aliases_file):
         # skip empty lines and comment lines
         if line == None or len(line) == 0 or line[0] == '#':
             continue
-        parts = line.split('|')
+        parts = line.rsplit('|', 1)
         if parts == None or len(parts) < 2:
             if args.verbose > 0:
                 print '  {}, line {}: malformed line, ignoring'.format(aliases_file, c)
@@ -54,16 +54,20 @@ def lookupTemplateFromAlias(alias_url, aliases_file):
                 if args.verbose > 0:
                     print '  {}, line {}: empty, ignoring'.format(aliases_file, c)
                 continue # drop the empty regex
-            # TODO: implement handling regexp
+            if re.search(regex, alias_url) != None:
+                templ_id = parts[1].strip()
+                break
         else: # otherwise, this is a simple prefix
             if alias_url.startswith(alias):
-                try:
-                    templ_id = int(parts[1].strip())
-                    break
-                except ValueError:
-                    if args.verbose > 0:
-                        print '  {}, line {}: malformed template ID (must be int), ignoring'.format(aliases_file, c)
+                templ_id = parts[1].strip()
+                break
     f.close()
+    if templ_id != None:
+        try:
+            templ_id = int(templ_id)
+        except ValueError:
+            if args.verbose > 0:
+                print '  {}, line {}: malformed template ID (must be int), ignoring'.format(aliases_file, c)
     return templ_id
 
 # @returns a string containing argparse arguments or `None` if the given ID was not found
@@ -78,7 +82,7 @@ def getTemplate(template_id, templates_file):
         # skip empty lines and comment lines
         if line == None or len(line) == 0 or line[0] == '#':
             continue
-        parts = line.split('|')
+        parts = line.split('|', 1)
         if parts == None or len(parts) < 2:
             if args.verbose > 0:
                 print '  {}, line {}: malformed line, ignoring'.format(templates_file, c)
@@ -93,7 +97,41 @@ def getTemplate(template_id, templates_file):
     f.close()
     return argresult
 
-def getStrFromElement(tree, specifier):
+# Detect if the command-line argument (`args_element`) overrides the
+# corresponding value in the template (`templ_element`), and return the
+# resulting value; if overriding and verbosity is 1 or higher, also report to
+# stdout.
+# @returns `args_element` if it is not empty, or `templ_element` otherwise
+def overrideIfEmptyAndReport(args_element, templ_element, element_name, verbosity):
+    if args_element == None or len(args_element) <= 0:
+        return templ_element
+    else:
+        if verbosity > 0 and not templ_element == None and not len(templ_element) <= 0:
+            print "Overriding {} from template with command-line argument {}".format(element_name, args_element)
+        return args_element
+
+def splitReplaceRegex(substform, verbosity=0):
+    if substform == None or len(substform) < 4 or substform[0] != 's' or substform[1] != substform[-1]:
+        return None
+    delim = substform[1]
+    substform = substform[2:-1]
+    result = []
+    parts = substform.split(delim)
+    s = parts[0]
+    i = 1
+    while i < len(parts):
+        if s[-1] == '\\' and (len(s) <= 1 or s[-2] != '\\'): # next delim was escaped
+            s += delim + parts[i]
+        else: # no escaping, splitting was legit
+            result.append(s)
+            s = parts[i]
+        i += 1
+    result.append(s)
+    if len(result) != 2:
+        return None
+    return tuple(result)
+
+def getStrFromElement(tree, specifier, replaceRegex):
     result=''
     if specifier != None: # if we actually got a specifier
         parts = specifier.rsplit('/', 1) # split it along slashes (only the first two parts will be used)
@@ -111,6 +149,8 @@ def getStrFromElement(tree, specifier):
                         result = element.text
                     else: # an attribute was really specified
                         result = element.get(attr_name)
+                    if replaceRegex != None:
+                        result = re.sub(replaceRegex[0], replaceRegex[1], result)
     return result
 
 def makeOutputFileName(url, outdir):
@@ -139,13 +179,13 @@ def grabPage(url, title_element, image_element, next_element):
         e.strerror = "Error while trying to open URL \"{}\":\n\t{}".format(url, e.strerror)
         raise e
 
-    title = getStrFromElement(tree, args.title_element)
-    imgurl = getStrFromElement(tree, args.image_element)
+    title = getStrFromElement(tree, args.title_element, args.title_regex)
+    imgurl = getStrFromElement(tree, args.image_element, args.image_regex)
     if args.verbose > 1:
         print "Raw image url: ", imgurl
     imgurl = urlparse.urljoin(url, imgurl)
     imgfile = makeOutputFileName(imgurl, outdir)
-    nexturl = getStrFromElement(tree, args.next_element)
+    nexturl = getStrFromElement(tree, args.next_element, args.next_regex)
 
     if not args.quiet:
         print "Image URL: ", imgurl
@@ -215,12 +255,21 @@ del group
 aparser.add_argument("-t", "--title-element",
     metavar="STR_SPEC",
     help="the specifier of the comic's issue title")
+aparser.add_argument("--title-regex",
+    metavar="RE",
+    help="a regular expression to be applied after extracting the title string")
 aparser.add_argument("-i", "--image-element",
     metavar="STR_SPEC",
     help="the specifier of the comic's image URL")
+aparser.add_argument("--image-regex",
+    metavar="RE",
+    help="a regular expression to be applied after extracting the image URL")
 aparser.add_argument("-n", "--next-element",
     metavar="STR_SPEC",
     help="the specifier of the link to the next issue page")
+aparser.add_argument("--next-regex",
+    metavar="RE",
+    help="a regular expression to be applied after extracting the 'next page' URL")
 aparser.add_argument("-o", "--output",
     metavar="DIR",
     help="output directory for downloaded files; must be writable; defaults\
@@ -303,35 +352,25 @@ if args.template != None: # let's use the template that's specified or found
             if args.verbose > 0:
                 print '\t', e
 
+
 if templstr != None and len(templstr) > 0:
-    addnewline = True
     templargs = aparser.parse_args(shlex.split(templstr + ' ' + args.url))
+    if args.verbose > 0:
+        print ''
     if args.verbose > 1:
-        if addnewline:
-            print ''
-            addnewline = False
         print 'Parsed template arguments:\n', templargs
-    if args.image_element == None or len(args.image_element) <= 0:
-        args.image_element = templargs.image_element
-    elif args.verbose > 0:
-        if addnewline:
-            print ''
-            addnewline = False
-        print 'Overriding image element from template with command-line argument {}'.format(args.image_element)
-    if args.title_element == None or len(args.title_element) <= 0:
-        args.title_element = templargs.title_element
-    elif args.verbose > 0:
-        if addnewline:
-            print ''
-            addnewline = False
-        print 'Overriding title element from template with command-line argument {}'.format(args.title_element)
-    if args.next_element == None or len(args.next_element()) <= 0:
-        args.next_element = templargs.next_element
-    elif args.verbose > 0:
-        if addnewline:
-            print ''
-        print 'Overriding next-URL element from template with command-line argment {}'.format(args.next_element)
-    del addnewline
+    args.image_element = overrideIfEmptyAndReport(args.image_element,
+        templargs.image_element, "image element specifier", args.verbose)
+    args.image_regex = overrideIfEmptyAndReport(args.image_regex,
+        templargs.image_regex, "image regexp", args.verbose)
+    args.title_element = overrideIfEmptyAndReport(args.title_element,
+        templargs.title_element, "title element", args.verbose)
+    args.title_regex = overrideIfEmptyAndReport(args.title_regex,
+        templargs.title_regex, "title regexp", args.verbose)
+    args.next_element = overrideIfEmptyAndReport(args.next_element,
+        templargs.next_element, "next-URL element", args.verbose)
+    args.next_regex = overrideIfEmptyAndReport(args.next_regex,
+        templargs.next_regex, "next-URL regexp", args.verbose)
 
 ## additional sanity checking on arguments
 if args.image_element == None or len(args.image_element) == 0:
@@ -339,17 +378,19 @@ if args.image_element == None or len(args.image_element) == 0:
         print "Error: No 'image' element was specified.\n"\
             "\tCannot grab comic. Aborting."
     sys.exit(1)
-
 if args.next_element == None or len(args.next_element) == 0:
     if not args.quiet:
         print "Warning: No 'next' element was specified, can only grab the "\
             "given URL,\nno following pages\n"
     args.count = 1
-
 if args.title_element == None or len(args.title_element) == 0:
     if args.verbose:
         print "Notice: No 'title' element was specified"
 
+## if we have any regular expressions for item selection, prepare those
+args.image_regex = splitReplaceRegex(args.image_regex)
+args.title_regex = splitReplaceRegex(args.title_regex, args.verbose)
+args.next_regex = splitReplaceRegex(args.next_regex)
 
 ## print some info about what we're gonna do
 if not args.quiet:

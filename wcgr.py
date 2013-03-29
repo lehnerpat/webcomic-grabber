@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ########
 
-import os, sys, argparse, shlex, re
+import os, sys, argparse, shlex, re, time
 import urllib2, urlparse
 from lxml import etree, html
 from lxml.cssselect import CSSSelector
@@ -328,6 +328,10 @@ aparser.add_argument('-w', '--number-width',
     default=4,
     help='how many digits to use for the running number in the output file '\
         'name, default is 4; use 0 to disable numbering of output files')
+aparser.add_argument("-p", "--pause",
+    type=int,
+    metavar="N",
+    help="number of seconds between requests to prevent blocking")
 aparser.add_argument('--templates-file',
     metavar='FILE',
     default='templates/wcgr_templates.txt',
@@ -456,6 +460,8 @@ try:
         if newurl == url: # end-of-comic detection; TODO: make a list of visited pages?
             url = None
         else:
+            if args.pause != None:
+                time.sleep(args.pause)
             url = newurl
         grabbedcount += 1
 except IOError as e:

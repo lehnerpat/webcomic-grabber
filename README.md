@@ -12,6 +12,14 @@ Automatically downloads the images from continuous issues of a webcomic, allowin
     HTTP library barfs; the requests library is more robust at handling
     HTTP responses
 
+# A Note on Artist Permission
+
+While this program is free to use (under the terms of the GNU GPLv3), please be aware that the intellectual property rights of each comic belong to the respective author(s)! This program is meant for private use only.
+
+Many artists rely on the ad revenues of their website as a source of income, so if you mean to use this program to get more than a few pages from a comic, please be polite and send them a short email asking for permission. Most will not mind it if you do this only once and for personal use, but many artists and webmasters have made bad experiences with these programs, where other people took their copyrighted work, and bundled it with their own apps without permission.
+
+Don't be a thief.
+
 # License
 
 This program is released under the GNU GPLv3 or newer.
